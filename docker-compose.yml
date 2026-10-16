@@ -1,0 +1,55 @@
+services:
+  payload:
+    image: node:20-alpine
+    ports:
+      - "3000:3000"
+    volumes:
+      - .:/home/node/app
+      - node_modules:/home/node/app/node_modules
+    working_dir: /home/node/app/
+    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm dev"
+    depends_on:
+      - mongo
+      # - postgres
+    env_file:
+      - .env
+
+  # Ensure your DATABASE_URL uses 'mongo' as the hostname ie. mongodb://mongo/my-db-name
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    command:
+      - --storageEngine=wiredTiger
+    volumes:
+      - data:/data/db
+    logging:
+      driver: none
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: embassy
+      POSTGRES_PASSWORD: localpassword
+      POSTGRES_DB: embassy
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+    # the local version of s3
+  localstack:
+    image: localstack/localstack
+    container_name: localstack
+    ports:
+      - 4566:4566
+    environment:
+      - SERVICES=s3
+      - GATEWAY_LISTEN=0.0.0.0:4566
+    volumes:
+      - ./localstack:/etc/localstack/init/ready.d
+
+volumes:
+  data:
+  pg_data:
+  node_modules:
